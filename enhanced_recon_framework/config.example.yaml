@@ -1,0 +1,57 @@
+scan:
+  max_concurrent_domains: 5
+  http_timeout_seconds: 15
+  tool_timeout_seconds: 900
+  idle_sleep_seconds: 300
+  metrics_port: 9090
+  js_download_timeout_seconds: 20
+  js_max_download_bytes: 5242880
+  max_wayback_urls_per_host: 200
+  max_js_assets_per_host: 50
+  analyze_js_assets: true
+  common_paths:
+    - /admin
+    - /api
+    - /api/v1
+    - /graphql
+    - /.env
+    - /.git/HEAD
+    - /robots.txt
+    - /swagger
+    - /swagger.json
+    - /v2/api-docs
+    - /backup
+
+database:
+  host: postgres
+  port: 5432
+  name: recon_framework
+  user: recon_user
+  password: ${RECON_DB_PASSWORD}
+
+redis:
+  host: redis
+  port: 6379
+  enabled: true
+
+alerts:
+  webhook_urls: []
+  telegram:
+    enabled: false
+    bot_token: ""
+    chat_id: ""
+  smtp:
+    enabled: false
+    server: ""
+    port: 587
+    username: ""
+    password: ""
+    from_email: ""
+    to_emails: []
+
+tools:
+  assetfinder: assetfinder
+  subfinder: subfinder
+  findomain: findomain
+  httpx: httpx
+  waybackurls: waybackurls
