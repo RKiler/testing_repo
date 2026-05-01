@@ -1,14 +1,48 @@
 scan:
   max_concurrent_domains: 5
+  max_concurrent_live_hosts: 5
   http_timeout_seconds: 15
+  httpx_threads: 50
   tool_timeout_seconds: 900
   idle_sleep_seconds: 300
   metrics_port: 9090
+
+  max_wayback_urls_per_host: 200
+  enable_gau: true
+  gau_max_urls_per_host: 200
+  enable_katana: false
+  katana_depth: 1
+  katana_max_urls_per_host: 100
+  enable_hakrawler: false
+  hakrawler_max_urls_per_host: 100
+  max_discovered_urls_per_host: 500
+
   js_download_timeout_seconds: 20
   js_max_download_bytes: 5242880
-  max_wayback_urls_per_host: 200
   max_js_assets_per_host: 50
   analyze_js_assets: true
+
+  screenshots_enabled: true
+  screenshots_on_fingerprint_change: true
+
+  directory_bruteforce_enabled: false
+  ffuf_wordlist: /app/wordlists/commons.txt
+  ffuf_threads: 10
+  ffuf_rate: 30
+  ffuf_timeout_seconds: 10
+  ffuf_match_status: [200, 204, 301, 302, 307, 308, 401, 403]
+  ffuf_max_hosts_per_domain: 3
+
+  nuclei_enabled: false
+  nuclei_only_on_new_live_hosts: true
+  nuclei_templates_dir: /root/nuclei-templates
+  nuclei_severities: [critical, high, medium]
+  nuclei_rate_limit: 20
+  nuclei_concurrency: 5
+  nuclei_bulk_size: 25
+  nuclei_timeout_seconds: 10
+  nuclei_retries: 1
+
   common_paths:
     - /admin
     - /api
@@ -36,6 +70,8 @@ redis:
 
 alerts:
   webhook_urls: []
+  summary_preview_limit: 20
+  first_run_summary_preview_limit: 0
   telegram:
     enabled: false
     bot_token: ""
@@ -49,9 +85,28 @@ alerts:
     from_email: ""
     to_emails: []
 
+retention:
+  alerts_days: 30
+  snapshots_days: 120
+  screenshots_days: 60
+  fingerprints_days: 120
+  maintenance_interval_minutes: 60
+
 tools:
   assetfinder: assetfinder
   subfinder: subfinder
   findomain: findomain
+  amass: amass
+  sublist3r: sublist3r
+  dnsx: dnsx
   httpx: httpx
+  naabu: naabu
   waybackurls: waybackurls
+  gau: gau
+  katana: katana
+  hakrawler: hakrawler
+  ffuf: ffuf
+  nuclei: nuclei
+  gowitness: gowitness
+  unfurl: unfurl
+  anew: anew

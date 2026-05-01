@@ -29,7 +29,14 @@ services:
       - .env
     volumes:
       - ./config.yaml:/app/config.yaml:ro
+      - ./wordlists:/app/wordlists:ro
       - recon_logs:/app/logs
+      - screenshots_data:/app/screenshots
+      - exports_data:/app/exports
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
     depends_on:
       postgres:
         condition: service_healthy
@@ -44,6 +51,8 @@ services:
       - .env
     volumes:
       - ./config.yaml:/app/config.yaml:ro
+      - ./wordlists:/app/wordlists:ro
+      - screenshots_data:/app/screenshots:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -86,3 +95,5 @@ volumes:
   prometheus_data:
   grafana_data:
   recon_logs:
+  screenshots_data:
+  exports_data:

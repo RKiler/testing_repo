@@ -323,3 +323,89 @@ WHERE jsonb_array_length(jar.extraction->'tokens_or_secret_like_strings') > 0
 ORDER BY jar.analyzed_at DESC
 LIMIT 500;
 ```
+
+## Latest scan snapshots
+
+```sql
+SELECT
+  d.domain,
+  ss.scan_finished_at,
+  ss.duration_seconds,
+  ss.first_run,
+  ss.totals,
+  ss.new_counts
+FROM scan_snapshots ss
+JOIN domains d ON d.id = ss.domain_id
+ORDER BY ss.scan_finished_at DESC
+LIMIT 20;
+```
+
+## Hosts with fingerprint changes
+
+```sql
+SELECT
+  d.domain,
+  f.location,
+  f.details,
+  f.last_seen
+FROM findings f
+LEFT JOIN domains d ON d.id = f.domain_id
+WHERE f.finding_type = 'host_fingerprint_changed'
+ORDER BY f.last_seen DESC;
+```
+
+## Recent screenshots
+
+```sql
+SELECT
+  d.domain,
+  lh.url,
+  sc.screenshot_path,
+  sc.capture_reason,
+  sc.captured_at
+FROM screenshots sc
+JOIN live_hosts lh ON lh.id = sc.live_host_id
+JOIN subdomains s ON s.id = lh.subdomain_id
+JOIN domains d ON d.id = s.domain_id
+ORDER BY sc.captured_at DESC
+LIMIT 20;
+```
+
+## Parameter risk clusters
+
+```sql
+SELECT
+  param_name,
+  risk_tags,
+  occurrence_count,
+  domain_count,
+  domains,
+  last_seen
+FROM parameter_risk_clusters
+ORDER BY occurrence_count DESC, domain_count DESC
+LIMIT 50;
+```
+
+## AI review endpoint queue
+
+```sql
+SELECT review_item
+FROM ai_review_endpoint_queue
+LIMIT 200;
+```
+
+## AI review JS queue
+
+```sql
+SELECT review_item
+FROM ai_review_js_queue
+LIMIT 200;
+```
+
+## AI review findings queue
+
+```sql
+SELECT review_item
+FROM ai_review_findings_queue
+LIMIT 200;
+```

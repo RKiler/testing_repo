@@ -35,6 +35,10 @@ FETCH_XHR_RE = re.compile(
     r"\b(?:fetch\s*\(|XMLHttpRequest|axios(?:\.[a-z]+)?\s*\(|\.open\s*\(\s*['\"](?:GET|POST|PUT|DELETE|PATCH)|\$.ajax\s*\()",
     re.I,
 )
+LOCATION_SOURCE_RE = re.compile(
+    r"\b(?:location(?:\.href|\.search|\.hash|\.pathname)?|document\.URL|documentURI|window\.name)\b",
+    re.I,
+)
 SENSITIVE_TERM_RE = re.compile(
     r"\b(?:webhook|admin|invite|invitation|export|role|roles|permission|permissions|impersonat(?:e|ion)|tenant|organization|org|billing|user[_-]?management)\b",
     re.I,
@@ -143,6 +147,7 @@ def extract_js_signals(text: str) -> dict[str, list[str]]:
         "auth_related_keywords": unique_matches(AUTH_RE, text),
         "tokens_or_secret_like_strings": unique_matches(SECRET_RE, text),
         "dangerous_dom_sinks": unique_matches(DOM_SINK_RE, text),
+        "location_sources": unique_matches(LOCATION_SOURCE_RE, text),
         "postmessage_usage": unique_matches(POSTMESSAGE_RE, text),
         "storage_usage": unique_matches(STORAGE_RE, text),
         "fetch_xhr_usage": unique_matches(FETCH_XHR_RE, text),
@@ -164,13 +169,16 @@ def looks_like_js_url(url: str) -> bool:
     return lower.endswith(".js") or ".js?" in lower
 
 
-def classify_parameter_risks(name: str) -> list[str]:
+def classify_parameter_risks(name: str, value: str = "") -> list[str]:
     tags: list[str] = []
+    lowered_value = value.lower()
     if XSS_PARAM_RE.search(name):
         tags.append("xss")
     if IDOR_PARAM_RE.search(name):
         tags.append("idor")
     if SSRF_PARAM_RE.search(name):
+        tags.append("ssrf")
+    if lowered_value.startswith(("http://", "https://")) and "ssrf" not in tags and XSS_PARAM_RE.search(name):
         tags.append("ssrf")
     return tags
 
@@ -188,17 +196,26 @@ def extract_query_parameters(url: str) -> list[dict[str, Any]]:
             {
                 "name": name,
                 "example_value": value,
-                "risk_tags": classify_parameter_risks(name),
+                "risk_tags": classify_parameter_risks(name, value),
             }
         )
     return params
 
 
-def severity_for_param_tags(tags: list[str]) -> str:
+def severity_for_param_tags(tags: list[str], name: str = "", value: str = "", path: str = "") -> str:
     tag_set = set(tags)
+    lowered_name = name.lower()
+    lowered_value = value.lower()
+    lowered_path = path.lower()
+    if "ssrf" in tag_set and lowered_value.startswith(("http://", "https://")):
+        return "high"
     if "ssrf" in tag_set:
         return "high"
-    if "xss" in tag_set and "idor" in tag_set:
+    if "idor" in tag_set and any(marker in lowered_path for marker in ("/admin", "/api/", "/users", "/accounts", "/members")):
+        return "high"
+    if "xss" in tag_set and ("idor" in tag_set or lowered_name in {"html", "template", "redirect", "callback"}):
+        return "high"
+    if "xss" in tag_set and any(marker in lowered_value for marker in ("<", "%3c", "javascript:")):
         return "high"
     if "xss" in tag_set or "idor" in tag_set:
         return "medium"
@@ -221,6 +238,28 @@ def severity_for_js_signals(signals: dict[str, list[str]]) -> list[dict[str, Any
                 "finding_type": "js_dom_xss_sinks",
                 "severity": "medium",
                 "details": {"matches": signals["dangerous_dom_sinks"][:20]},
+            }
+        )
+    if signals["dangerous_dom_sinks"] and signals["location_sources"]:
+        findings.append(
+            {
+                "finding_type": "js_dom_xss_candidate",
+                "severity": "high",
+                "details": {
+                    "sinks": signals["dangerous_dom_sinks"][:20],
+                    "sources": signals["location_sources"][:20],
+                },
+            }
+        )
+    if signals["sensitive_terms"] and (signals["api_urls"] or signals["endpoint_paths"]):
+        findings.append(
+            {
+                "finding_type": "js_sensitive_admin_surface",
+                "severity": "medium",
+                "details": {
+                    "sensitive_terms": signals["sensitive_terms"][:20],
+                    "sample_endpoints": (signals["api_urls"] + signals["endpoint_paths"])[:20],
+                },
             }
         )
     return findings
